@@ -2,15 +2,14 @@ import joblib
 from sklearn.datasets import load_digits
 from sklearn.svm import SVC
 
-print("Loading dataset...")
+# Load standard digits
 digits = load_digits()
 X, y = digits.data, digits.target
 
-print("Training pre-tuned classifier...")
-# Using a Support Vector Classifier which performs very well on digit recognition
-model = SVC(gamma=0.001, C=100.0, probability=True)
+# Train a robust Support Vector Classifier
+model = SVC(gamma=0.001, C=10.0, probability=True)
 model.fit(X, y)
 
-# Save the trained model to disk
+# Save
 joblib.dump(model, 'model.joblib')
-print("Model saved successfully as 'model.joblib'!")
+print("New balanced model.joblib saved!")

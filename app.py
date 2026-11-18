@@ -1,11 +1,11 @@
 import streamlit as st
 import joblib
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 # Page configuration
 st.set_page_config(
-    page_title="Digit Image Classifier",
+    page_title="Handwritten Digit Classifier",
     page_icon="🔢",
     layout="centered"
 )
@@ -17,30 +17,35 @@ def load_model():
 
 model = load_model()
 
-# App UI Header
 st.title("🔢 Handwritten Digit Classifier")
-st.write("Upload an image of a handwritten digit (0-9), and the pre-trained model will classify it.")
+st.write("Upload an image of a handwritten digit (0-9). For best results, use a dark digit on a light background.")
 
-# File uploader widget
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Open and display the uploaded image
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
     
     try:
-        # Preprocessing to match the model's expected format (8x8 grayscale, flattened)
+        # 1. Convert to grayscale ('L')
         img_gray = image.convert('L')
+        
+        # 2. Invert colors if background is white (sklearn digits expect dark background, bright foreground)
+        # We check the corners to see if the background is light
+        extrema = img_gray.getextrema()
+        # Resize to 8x8 using high-quality resampling
         img_resized = img_gray.resize((8, 8), Image.Resampling.LANCZOS)
         
-        # Convert pixels to numpy array
         img_array = np.array(img_resized, dtype=float)
         
-        # Scikit-learn digits dataset scales pixels from 0 to 16 (invert colors if background is white)
-        # Note: adjust this if your uploaded image has a white background vs black background
+        # Normalize and map pixels from 0-255 to sklearn's 0-16 scale
+        # Automatically invert if it looks like dark text on a white background
+        if np.mean(img_array) > 127: 
+            img_array = 16 - (img_array / 255.0 * 16)
+        else:
+            img_array = (img_array / 255.0 * 16)
+            
         img_flattened = img_array.flatten()
-        img_flattened = 16 - (img_flattened / 16.0) # Normalizing and mapping
         
         # Make prediction
         prediction = model.predict([img_flattened])
@@ -50,6 +55,10 @@ if uploaded_file is not None:
         # Display Results
         st.success(f"### Prediction: Number {prediction[0]}")
         st.info(f"Confidence: {confidence:.2f}%")
+        
+        # Show probability breakdown across all digits
+        st.write("### Confidence Breakdown:")
+        st.bar_chart({str(i): prob for i, prob in enumerate(prediction_proba[0])})
             
     except Exception as e:
         st.error(f"An error occurred during image processing: {e}")
