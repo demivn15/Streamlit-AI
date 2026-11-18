@@ -5,12 +5,12 @@ from PIL import Image
 
 # Page configuration
 st.set_page_config(
-    page_title="Image Classification App",
-    page_icon="🖼️",
+    page_title="Digit Image Classifier",
+    page_icon="🔢",
     layout="centered"
 )
 
-# Load the model with caching so it doesn't reload on every interaction
+# Load the pre-trained model with caching
 @st.cache_resource
 def load_model():
     return joblib.load('model.joblib')
@@ -18,8 +18,8 @@ def load_model():
 model = load_model()
 
 # App UI Header
-st.title("🖼️ Image Classification App")
-st.write("Upload an image, and the model will classify it.")
+st.title("🔢 Handwritten Digit Classifier")
+st.write("Upload an image of a handwritten digit (0-9), and the pre-trained model will classify it.")
 
 # File uploader widget
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -29,30 +29,27 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
     
-    st.write("Processing image...")
-    
     try:
-        # Preprocessing: Convert to grayscale, resize to match model input (8x8 for this example), and flatten
+        # Preprocessing to match the model's expected format (8x8 grayscale, flattened)
         img_gray = image.convert('L')
         img_resized = img_gray.resize((8, 8), Image.Resampling.LANCZOS)
         
-        # Convert image pixels to numpy array and normalize (matching sklearn digits dataset scale)
+        # Convert pixels to numpy array
         img_array = np.array(img_resized, dtype=float)
-        img_flattened = img_array.flatten()
         
-        # Rescale pixel values if your training data required it (e.g., scaling 0-255 to 0-16)
-        img_flattened = img_flattened / 16.0 
+        # Scikit-learn digits dataset scales pixels from 0 to 16 (invert colors if background is white)
+        # Note: adjust this if your uploaded image has a white background vs black background
+        img_flattened = img_array.flatten()
+        img_flattened = 16 - (img_flattened / 16.0) # Normalizing and mapping
         
         # Make prediction
         prediction = model.predict([img_flattened])
-        prediction_proba = model.predict_proba([img_flattened]) if hasattr(model, "predict_proba") else None
+        prediction_proba = model.predict_proba([img_flattened])
+        confidence = np.max(prediction_proba) * 100
         
         # Display Results
-        st.success(f"### Prediction: Class {prediction[0]}")
-        
-        if prediction_proba is not None:
-            confidence = np.max(prediction_proba) * 100
-            st.info(f"Confidence: {confidence:.2f}%")
+        st.success(f"### Prediction: Number {prediction[0]}")
+        st.info(f"Confidence: {confidence:.2f}%")
             
     except Exception as e:
-        st.error(f"An error occurred during processing: {e}")
+        st.error(f"An error occurred during image processing: {e}")
