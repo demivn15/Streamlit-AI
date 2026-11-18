@@ -57,3 +57,4 @@ The app will open automatically in your default browser at `http://localhost:850
 * Upload clear images (`.jpg`, `.jpeg`, or `.png`) containing a single handwritten digit (`0`–`9`).
 * Review the **Confidence Breakdown** bar chart below each prediction to inspect how the model weighs probabilities across all ten digit classes.
 
+
