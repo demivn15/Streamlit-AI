@@ -11,34 +11,34 @@ st.set_page_config(
     layout="centered"
 )
 
-# Load a robust, pre-trained handwritten digit model from Hugging Face
+# Load a robust, pre-trained handwritten digit model from Hugging Face with error handling
 @st.cache_resource
 def load_model_and_processor():
-    # Using a standard pre-trained vision model for MNIST digit recognition
-    model_id = "farleyknight/mnist-digit-classification-vit" # or a robust standard model
+    model_id = "farleyknight/mnist-digit-classification-vit"
     processor = AutoImageProcessor.from_pretrained(model_id)
     model = AutoModelForImageClassification.from_pretrained(model_id)
     return processor, model
 
-try:
-    processor, model = load_model_and_processor()
-except Exception as e:
-    # Fallback to standard microsoft/resnet-50 or custom handling if needed, 
-    # but let's use a reliable pipeline structure:
-    st.warning("Loading fallback configuration...")
-
 st.title("🔢 Handwritten Digit Classifier")
 st.write("Upload an image of a handwritten digit (0-9).")
 
+# Load model safely
+with st.spinner("Loading pre-trained AI model... Please wait."):
+    try:
+        processor, model = load_model_and_processor()
+        model_loaded = True
+    except Exception as e:
+        model_loaded = False
+        st.error(f"Failed to load model from Hugging Face: {e}")
+
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
+if uploaded_file is not None and model_loaded:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
     
     try:
         # Preprocess image for the vision model
-        # Convert to RGB (Vision Transformers expect 3 channels)
         if image.mode != 'RGB':
             image = image.convert('RGB')
             
@@ -64,3 +64,5 @@ if uploaded_file is not None:
             
     except Exception as e:
         st.error(f"An error occurred during image processing: {e}")
+elif uploaded_file is not None and not model_loaded:
+    st.error("Cannot process image because the model failed to load.")
